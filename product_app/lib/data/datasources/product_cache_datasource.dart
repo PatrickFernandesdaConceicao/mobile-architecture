@@ -1,8 +1,14 @@
 import 'package:product_app/data/models/product_model.dart';
 
-abstract class ProductCacheDatasource {
-  Future<void> save(List<ProductModel> products);
-  List<ProductModel>? get();
+class ProductCacheDatasource {
+  List<ProductModel>? _cache;
+  void save(List<ProductModel> products) {
+    _cache = products;
+  }
+
+  List<ProductModel>? get() {
+    return _cache;
+  }
 }
 
 class ProductCacheDatasourceImpl implements ProductCacheDatasource {
@@ -17,4 +23,7 @@ class ProductCacheDatasourceImpl implements ProductCacheDatasource {
   List<ProductModel>? get() {
     return _cachedProducts;
   }
+
+  @override
+  List<ProductModel>? _cache;
 }

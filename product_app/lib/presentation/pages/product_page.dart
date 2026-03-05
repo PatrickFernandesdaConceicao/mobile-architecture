@@ -15,31 +15,16 @@ class ProductPage extends StatelessWidget {
         valueListenable: viewModel.state,
         builder: (context, state, _) {
           if (state.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
           if (state.error != null) {
-            return Center(
-              child: Text(state.error!),
-            );
+            return Center(child: Text(state.error!));
           }
           return ListView.builder(
             itemCount: state.products.length,
             itemBuilder: (context, index) {
               final product = state.products[index];
               return ListTile(
-                leading: SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: Image.network(
-                    product.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image_not_supported);
-                    },
-                  ),
-                ),
                 title: Text(product.title),
                 subtitle: Text("\$${product.price}"),
               );
