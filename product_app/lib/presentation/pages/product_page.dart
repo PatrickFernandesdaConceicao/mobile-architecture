@@ -1,39 +1,67 @@
 import 'package:flutter/material.dart';
-import 'package:product_app/presentation/viewmodels/product_viewmodel.dart';
-import 'package:product_app/presentation/states/product_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:product_app/presentation/providers/product_provider.dart';
 
-class ProductPage extends StatelessWidget {
-  final ProductViewModel viewModel;
-
-  const ProductPage({super.key, required this.viewModel});
+class ProductPage extends ConsumerWidget {
+  const ProductPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(productListProvider);
+    final notifier = ref.read(productListProvider.notifier);
+
+    final favCount = state.favoriteCount;
     return Scaffold(
-      appBar: AppBar(title: const Text("Products")),
-      body: ValueListenableBuilder<ProductState>(
-        valueListenable: viewModel.state,
-        builder: (context, state, _) {
+      appBar: AppBar(
+        title: Text('Products${favCount > 0 ? ' ($favCount fav${favCount > 1 ? 's' : ''})' : ''}'),
+      ),
+      body: Builder(
+        builder: (context) {
           if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
           if (state.error != null) {
-            return Center(child: Text(state.error!));
+            return Center(
+              child: Text(state.error!),
+            );
           }
           return ListView.builder(
             itemCount: state.products.length,
             itemBuilder: (context, index) {
               final product = state.products[index];
               return ListTile(
+                tileColor: product.isFavorite
+                    ? Colors.pink.withAlpha((0.2 * 255).round())
+                    : null,
+                leading: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Image.network(
+                    product.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.image_not_supported);
+                    },
+                  ),
+                ),
                 title: Text(product.title),
-                subtitle: Text("\$${product.price}"),
+                subtitle: Text('\$${product.price}'),
+                trailing: IconButton(
+                  icon: Icon(
+                    product.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: product.isFavorite ? Colors.red : null,
+                  ),
+                  onPressed: () => notifier.toggleFavorite(product.id),
+                ),
               );
             },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: viewModel.loadProducts,
+        onPressed: () => notifier.loadProducts(),
         child: const Icon(Icons.download),
       ),
     );

@@ -7,37 +7,36 @@ import 'package:product_app/core/errors/failure.dart';
 class ProductRepositoryImpl implements ProductRepository {
   final ProductRemoteDatasource remote;
   final ProductCacheDatasource cache;
+
   ProductRepositoryImpl(this.remote, this.cache);
+
   @override
   Future<List<Product>> getProducts() async {
     try {
       final models = await remote.getProducts();
-      cache.save(models);
+      await cache.save(models);
       return models
-          .map(
-            (m) => Product(
-              id: m.id,
-              title: m.title,
-              price: m.price,
-              image: m.image,
-            ),
-          )
+          .map((m) => Product(
+                id: m.id,
+                title: m.title,
+                price: m.price,
+                image: m.image,
+                isFavorite: false,
+              ))
           .toList();
     } catch (e) {
       final cached = cache.get();
       if (cached != null) {
         return cached
-            .map(
-              (m) => Product(
-                id: m.id,
-                title: m.title,
-                price: m.price,
-                image: m.image,
-              ),
-            )
+            .map((m) => Product(
+                  id: m.id,
+                  title: m.title,
+                  price: m.price,
+                  image: m.image,
+                ))
             .toList();
       }
-      throw Failure("N o foi poss vel carregar os produtos");
+      throw Failure("Não foi possível carregar os produtos");
     }
   }
 }
