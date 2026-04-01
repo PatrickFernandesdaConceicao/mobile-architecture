@@ -3,16 +3,14 @@ import 'package:product_app/core/network/client_http.dart';
 import 'package:product_app/data/datasources/product_remote_datasource.dart';
 import 'package:product_app/data/datasources/product_cache_datasource.dart';
 import 'package:product_app/data/repositories/product_repository_impl.dart';
+import 'package:product_app/domain/entities/product.dart';
 import 'package:product_app/domain/repositories/product_repository.dart';
 import 'package:product_app/presentation/states/product_state.dart';
 
-final httpClientProvider = Provider<HttpClient>((ref) {
-  return HttpClient();
-});
+final httpClientProvider = Provider<HttpClient>((ref) => HttpClient());
 
 final productRemoteDatasourceProvider = Provider<ProductRemoteDatasource>((ref) {
-  final client = ref.watch(httpClientProvider);
-  return ProductRemoteDatasource(client);
+  return ProductRemoteDatasource(ref.watch(httpClientProvider));
 });
 
 final productCacheDatasourceProvider = Provider<ProductCacheDatasource>((ref) {
@@ -20,9 +18,10 @@ final productCacheDatasourceProvider = Provider<ProductCacheDatasource>((ref) {
 });
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
-  final remote = ref.watch(productRemoteDatasourceProvider);
-  final cache = ref.watch(productCacheDatasourceProvider);
-  return ProductRepositoryImpl(remote, cache);
+  return ProductRepositoryImpl(
+    ref.watch(productRemoteDatasourceProvider),
+    ref.watch(productCacheDatasourceProvider),
+  );
 });
 
 class ProductListNotifier extends StateNotifier<ProductState> {
@@ -34,35 +33,59 @@ class ProductListNotifier extends StateNotifier<ProductState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final products = await repository.getProducts();
-      state = state.copyWith(
-        isLoading: false,
-        products: products,
-      );
+      state = state.copyWith(isLoading: false, products: products);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   void toggleFavorite(int productId) {
     final updated = state.products
-        .map((p) => p.id == productId
-            ? p.copyWith(isFavorite: !p.isFavorite)
-            : p)
+        .map((p) => p.id == productId ? p.copyWith(isFavorite: !p.isFavorite) : p)
         .toList();
     state = state.copyWith(products: updated);
+  }
+
+  Future<void> addProduct(Product product) async {
+    try {
+      final created = await repository.addProduct(product);
+      // A FakeStore API retorna id=21 para todos os POSTs (mock).
+      // Em uma API real, usaríamos `created` diretamente.
+      state = state.copyWith(products: [...state.products, created]);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> updateProduct(Product product) async {
+    try {
+      await repository.updateProduct(product);
+      final updated = state.products
+          .map((p) => p.id == product.id ? product : p)
+          .toList();
+      state = state.copyWith(products: updated);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> deleteProduct(int id) async {
+    try {
+      await repository.deleteProduct(id);
+      state = state.copyWith(
+        products: state.products.where((p) => p.id != id).toList(),
+      );
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
   }
 }
 
 final productListProvider =
     StateNotifierProvider<ProductListNotifier, ProductState>((ref) {
-  final repo = ref.watch(productRepositoryProvider);
-  return ProductListNotifier(repo);
+  return ProductListNotifier(ref.watch(productRepositoryProvider));
 });
 
 extension ProductStateX on ProductState {
-  int get favoriteCount =>
-      products.where((p) => p.isFavorite).length;
+  int get favoriteCount => products.where((p) => p.isFavorite).length;
 }

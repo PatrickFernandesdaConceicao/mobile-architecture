@@ -2,76 +2,134 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:product_app/presentation/providers/product_provider.dart';
 import 'package:product_app/presentation/pages/product_details_page.dart';
+import 'package:product_app/presentation/pages/product_form_page.dart';
 
 class ProductPage extends ConsumerWidget {
   const ProductPage({super.key});
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    int id,
+    String title,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir produto'),
+        content: Text('Deseja excluir "$title"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await ref.read(productListProvider.notifier).deleteProduct(id);
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(productListProvider);
     final notifier = ref.read(productListProvider.notifier);
-
     final favCount = state.favoriteCount;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Products${favCount > 0 ? ' ($favCount fav${favCount > 1 ? 's' : ''})' : ''}'),
+        title: Text(
+          'Products${favCount > 0 ? ' ($favCount fav${favCount > 1 ? 's' : ''})' : ''}',
+        ),
       ),
-      body: Builder(
-        builder: (context) {
-          if (state.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (state.error != null) {
-            return Center(
-              child: Text(state.error!),
-            );
-          }
-          return ListView.builder(
-            itemCount: state.products.length,
-            itemBuilder: (context, index) {
-              final product = state.products[index];
-              return ListTile(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductDetailsPage(product: product),
+      body: Builder(builder: (context) {
+        if (state.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state.error != null) {
+          return Center(child: Text(state.error!));
+        }
+        return ListView.builder(
+          itemCount: state.products.length,
+          itemBuilder: (context, index) {
+            final product = state.products[index];
+            return ListTile(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProductDetailsPage(product: product),
+                ),
+              ),
+              tileColor: product.isFavorite
+                  ? Colors.pink.withAlpha((0.2 * 255).round())
+                  : null,
+              leading: SizedBox(
+                width: 60,
+                height: 60,
+                child: Image.network(
+                  product.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.image_not_supported),
+                ),
+              ),
+              title: Text(product.title),
+              subtitle: Text('\$${product.price}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      product.isFavorite
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      color: product.isFavorite ? Colors.red : null,
                     ),
-                  );
-                },
-                tileColor: product.isFavorite
-                    ? Colors.pink.withAlpha((0.2 * 255).round())
-                    : null,
-                leading: SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: Image.network(
-                    product.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.image_not_supported);
-                    },
+                    onPressed: () => notifier.toggleFavorite(product.id),
                   ),
-                ),
-                title: Text(product.title),
-                subtitle: Text('\$${product.price}'),
-                trailing: IconButton(
-                  icon: Icon(
-                    product.isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: product.isFavorite ? Colors.red : null,
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductFormPage(product: product),
+                      ),
+                    ),
                   ),
-                  onPressed: () => notifier.toggleFavorite(product.id),
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => notifier.loadProducts(),
-        child: const Icon(Icons.download),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () =>
+                        _confirmDelete(context, ref, product.id, product.title),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      }),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'add',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProductFormPage()),
+            ),
+            child: const Icon(Icons.add),
+          ),
+          const SizedBox(height: 8),
+          FloatingActionButton(
+            heroTag: 'refresh',
+            onPressed: () => notifier.loadProducts(),
+            child: const Icon(Icons.download),
+          ),
+        ],
       ),
     );
   }
