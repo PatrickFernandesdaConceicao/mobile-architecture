@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:product_app/domain/entities/product.dart';
+import 'package:product_app/presentation/providers/product_provider.dart';
 
-class ProductDetailsPage extends StatelessWidget {
-  final Product product;
+class ProductDetailsPage extends ConsumerWidget {
+  final int productId;
 
-  const ProductDetailsPage({
-    super.key,
-    required this.product,
-  });
+  const ProductDetailsPage({super.key, required this.productId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final product = ref.watch(productByIdProvider(productId)) as Product?;
+
+    if (product == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Detalhes do produto')),
+        body: const Center(child: Text('Produto não encontrado.')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalhes do produto'),
@@ -32,13 +40,10 @@ class ProductDetailsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
                     product.image,
-                    width: double.infinity,
-                    height: 160,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         height: 160,
-                        width: double.infinity,
                         color: Theme.of(context)
                             .colorScheme
                             .surfaceContainerHighest,
@@ -71,4 +76,3 @@ class ProductDetailsPage extends StatelessWidget {
     );
   }
 }
-

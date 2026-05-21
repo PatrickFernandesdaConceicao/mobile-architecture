@@ -89,3 +89,12 @@ final productListProvider =
 extension ProductStateX on ProductState {
   int get favoriteCount => products.where((p) => p.isFavorite).length;
 }
+
+final productByIdProvider = Provider.family<dynamic, int>((ref, id) {
+  final products = ref.watch(productListProvider).products;
+  try {
+    return products.firstWhere((p) => p.id == id);
+  } catch (_) {
+    return null;
+  }
+});

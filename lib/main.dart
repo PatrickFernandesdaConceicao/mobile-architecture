@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:product_app/presentation/pages/initial_page.dart';
 import 'package:product_app/presentation/pages/product_page.dart';
+import 'package:product_app/presentation/pages/product_details_page.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -21,6 +22,20 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const InitialPage(),
         '/products': (context) => const ProductPage(),
+      },
+      onGenerateRoute: (settings) {
+        final uri = Uri.parse(settings.name ?? '');
+        if (uri.pathSegments.length == 2 &&
+            uri.pathSegments[0] == 'products') {
+          final id = int.tryParse(uri.pathSegments[1]);
+          if (id != null) {
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => ProductDetailsPage(productId: id),
+            );
+          }
+        }
+        return null;
       },
     );
   }
